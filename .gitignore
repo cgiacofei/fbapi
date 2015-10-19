@@ -13,3 +13,7 @@
 # produced vignettes
 vignettes/*.html
 vignettes/*.pdf
+.Rproj.user
+
+# Special Files
+secrets.R
