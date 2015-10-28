@@ -5,7 +5,6 @@ pkgTest('plyr')
 pkgTest('reshape2')
 
 RESOURCES <- c(
-  calorieIn='foods/log/caloriesIn',
   calorieOut='activities/calories',
   activityCalories='activities/activityCalories',
   steps='activities/steps',
@@ -16,7 +15,8 @@ RESOURCES <- c(
   minutesFairly='activities/minutesFairlyActive',
   minutesVery='activities/minutesVeryActive',
   heartRate='activities/heart',
-  weight='body/log/weight'
+  weight='body/log/weight',
+  nutrition='foods/log'
 )
 
 api_auth <- function(clientID){
@@ -32,42 +32,61 @@ api_auth <- function(clientID){
   cat(oauthString)
 }
 
-resource_get <- function(what, date.start, date.end, Token){
+resource_get <- function(what, date.start, date.end, token){
   API_URL <- 'https://api.fitbit.com/1/user/-/'
-
+  
   dateRange <- paste(date.start, date.end, sep='/')
+  
+  
+  
+  if (what == 'nutrition'){
+    dates = seq(from=as.Date(date.start), to=as.Date(date.end), by=1)
+    for (date in as.character(as.Date(dates))) {
+      url <- paste(API_URL, RESOURCES[[what]],'/date/', date, '.json', sep='')
+      request <- GET(url, add_headers("Authorization"= token))
 
-  url <- paste(API_URL, RESOURCES[[what]],'/date/', dateRange, '.json', sep='')
-
-  # make the request
-  request <- GET(url, add_headers("Authorization"= Token))
-
-  if (what == 'heartRate'){
-
-    data <- jsonlite::fromJSON(jsonlite::toJSON(content(request)))
-    fb.df <- data$`activities-heart`[1]
-    fb.df$RHR <- data[[1]]$value$restingHeartRate
-    names(fb.df) <- c('time', what)
-    fb.df$time <- as.character(fb.df$time, is.factor=FALSE)
-    fb.df[,eval(what)] <- as.numeric(unlist(fb.df[,eval(what)]))
-
-  } else if (what == 'weight') {
-    
-    fb.df <- as.data.frame(do.call(rbind, content(request)[[1]]))
-    fb.df <- subset(fb.df, select=c(date, bmi, weight))
-    names(fb.df)[names(fb.df) == 'date'] <- 'time'
-    fb.df$time <- as.character(fb.df$time, is.factor=FALSE)
-    fb.df$weight <- as.numeric(unlist(fb.df$weight))
+      if (!exists('fb.df')) {
+        fb.df <- as.data.frame(content(request)$summary)
+        fb.df$time <- date
+      } else {
+        nutrition.row <- as.data.frame(content(request)$summary)
+        nutrition.row$time <- date
+        
+        fb.df <- rbind(fb.df, nutrition.row)
+      }
+    }
 
   } else {
-
-    fb.df <- as.data.frame(do.call(rbind, content(request)[[1]]))
-    fb.df$dateTime <- as.character(fb.df$dateTime, is.factor=FALSE)
-    names(fb.df) <- c('time', what)
-    fb.df[,eval(what)] <- as.numeric(fb.df[,eval(what)])
+    url <- paste(API_URL, RESOURCES[[what]],'/date/', dateRange, '.json', sep='')
+    # make the request
+    request <- GET(url, add_headers("Authorization"= token))
+    
+    if (what == 'heartRate'){
+      
+      data <- jsonlite::fromJSON(jsonlite::toJSON(content(request)))
+      fb.df <- data$`activities-heart`[1]
+      fb.df$RHR <- data[[1]]$value$restingHeartRate
+      names(fb.df) <- c('time', what)
+      fb.df$time <- as.character(fb.df$time, is.factor=FALSE)
+      
+    } else if (what == 'weight') {
+      
+      fb.df <- as.data.frame(do.call(rbind, content(request)[[1]]))
+      fb.df <- subset(fb.df, select=c(date, bmi, weight))
+      names(fb.df)[names(fb.df) == 'date'] <- 'time'
+      fb.df$time <- as.character(fb.df$time, is.factor=FALSE)
+      
+    } else {
+      
+      fb.df <- as.data.frame(do.call(rbind, content(request)[[1]]))
+      fb.df$dateTime <- as.character(fb.df$dateTime, is.factor=FALSE)
+      names(fb.df) <- c('time', what)
+      
+    }
+    fb.df[2:NCOL(fb.df)] <-as.numeric(unlist(fb.df[2:NCOL(fb.df)]))
   }
 
-  fb.df[2:NCOL(fb.df)] <-as.numeric(unlist(fb.df[2:NCOL(fb.df)]))
+  
   return(fb.df)
 }
 
@@ -81,7 +100,6 @@ api_get <- function(date.start, date.end, token){
 
   LOGGABLES <- c(
     'calorieOut',
-    'calorieIn',
     'activityCalories',
     'steps',
     'distance',
@@ -91,7 +109,8 @@ api_get <- function(date.start, date.end, token){
     'minutesFairly',
     'minutesVery',
     'heartRate',
-    'weight'
+    'weight',
+    'nutrition'
   )
 
   for (loggable in LOGGABLES) {
