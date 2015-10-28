@@ -1,7 +1,7 @@
 library('googlesheets')
 suppressPackageStartupMessages(library('dplyr'))
 
-gs_copy(gs_gap(), to = "Gapminder")
+fitbit <- gs_title("Fitbit Data")
 
-gs_ls()
+data <- gs_read(fitbit,)
 
