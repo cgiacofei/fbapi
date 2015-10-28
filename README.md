@@ -26,5 +26,3 @@ api.secret <- 'API_CONSUMER_SECRET'
 The file read.R is used for reading fitbit data from the web. Currently it is setup for scraping the webpage directly.
 
 ## TODO
- 1. Get calories in
- 2. Implement proper API access
