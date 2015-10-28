@@ -3,7 +3,10 @@ source('R/functions.R')
 pkgTest('googlesheets')
 
 # pkgTest('httr') # load package for http communication
+get_googlesheet <- function(sheet){
 
-fitbit <- gs_title("Fitbit Data")
+  fitbit <- gs_title("Fitbit Data")
+  data <- gs_read(fitbit,)
 
-data <- gs_read(fitbit,)
+}
+
