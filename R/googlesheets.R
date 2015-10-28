@@ -1,5 +1,5 @@
-source('dev.R')
-source('functions.R')
+source('R/dev.R')
+source('R/functions.R')
 pkgTest('googlesheets')
 
 # pkgTest('httr') # load package for http communication

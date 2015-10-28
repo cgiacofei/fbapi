@@ -10,6 +10,7 @@
 .Rproj.user/
 .RData
 .Rproj
+.Rout
 
 # produced vignettes
 vignettes/*.html
