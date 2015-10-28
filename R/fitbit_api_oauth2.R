@@ -1,5 +1,4 @@
 source('R/dev.R')
-source('R/settings.R')
 source('R/functions.R')
 pkgTest('httr') # load package for http communication
 pkgTest('plyr')
