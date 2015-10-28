@@ -1,9 +1,9 @@
 # a simple Oauth connection with Fitbit API
 library(httr)
 
-source('settings.R')
-source('functions.R')
-source('dev.R')
+source('R/settings.R')
+source('R/functions.R')
+source('R/dev.R')
 
 api_auth <- function(key, secret){
   # Generate authentication token for fitbit API
