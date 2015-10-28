@@ -15,6 +15,10 @@
 vignettes/*.html
 vignettes/*.pdf
 
-# Other files
+# Special Files
+secrets.R
+settings.R
 .httr-oauth
+.project
+.settings*
 env

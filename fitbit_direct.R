@@ -51,42 +51,34 @@ if (start.date >= end.date){
       total.data$time <- as.character(as.Date(total.data$time))
     }
   }
-  
-  
-  
-  # Gather heart-rate and calories
+
   date.sequence <- as.character(seq(as.Date(start.date), as.Date(end.date), by = "day"))
-  
-  calories <- data.frame(time=character(0), calories.burned=numeric(0))
-  
-  for (date in date.sequence){
-    cals <- fitbitScraper::get_intraday_data(
-      cookie,
-      what="calories-burned",
-      date
-    )
-    
-    total.cals <- sum(cals$'calories-burned')
-    cat(paste(date, total.cals, '\n', sep=' '))
-    calories <- rbind(calories, c(date, total.cals))
-  }
-  
-  fitbitScraper::get_intraday_data()
+
   # Gather Weight measurements
   weight.data <- fitbitScraper::get_weight_data(
     cookie,
     start_date="2015-10-09",
-    end_date=as.character(Sys.Date())
+    end_date=end.date
   )
-  
-  
+
   weight.data$time <- as.character(as.Date(weight.data$time))
-  
+
   total.data <- merge(total.data, weight.data,by="time", all.x=TRUE)
   
-  
-  
-  write.csv(total.data, file="data.csv")
+  # Gather Sleep
+  #sleep.data <- fitbitScraper::get_sleep_data(
+  #  cookie,
+  #  start_date="2015-10-09",
+  #  end_date=end.date
+  #)
 
+  #total.data <- merge(total.data, sleep.data$df,by.x='time', by.y='date', all.x=TRUE)
+
+  if (exists('file.Df')) {
+    output <- rbind(file.Df, total.data)
+  } else {
+    output <- total.data
+  }
+
+  write.csv(total.data, file="data.csv", row.names=FALSE)
 }
-
