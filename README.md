@@ -27,4 +27,4 @@ The file read.R is used for reading fitbit data from the web. Currently it is se
 
 ## TODO
  1. Get calories in
- 2. 
+ 2. Implement proper API access
