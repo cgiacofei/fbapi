@@ -5,16 +5,11 @@ source('settings.R')
 source('functions.R')
 source('dev.R')
 
-Sys.setenv(http_proxy='http://proxyarray.mazdausa.com:80')
-Sys.setenv(https_proxy='http://proxyarray.mazdausa.com:80')
-
 API_URL <- 'https://api.fitbit.com/1/user/-/'
 
 token_url = "https://api.fitbit.com/oauth/request_token"
 access_url = "https://api.fitbit.com/oauth/access_token"
 auth_url = "https://www.fitbit.com/oauth/authorize"
-
-
 
 key <- '31602c6029b39e65bd6ee6ed18499bf0'
 secret <- '724a62b928a0ed884bf5031f133009fd'
