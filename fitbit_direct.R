@@ -1,64 +1,86 @@
 library("fitbitScraper")
 
-source('secrets.R')
+source('settings.R')
 
 cookie <- fitbitScraper::login(
-  email=fitbit.email,
-  password=fitbit.password,
+  email=fb.email,
+  password=fb.password,
   rememberMe=TRUE
 )
 
-HR.df <- get_intraday_data(cookie, what="heart-rate", date="2015-10-09")
+LOGGABLES <- c("steps", "distance", "floors", "minutesVery", "caloriesBurnedVsIntake",
+  "getTimeInHeartRateZonesPerDay", "getRestingHeartRateData")
 
-#
-# Sample code
-#
+end.date <- as.character(as.Date(Sys.Date()) - 1)
 
-cookie = login("my@email.com", "mypassword", rememberMe = TRUE)
-startdate = as.Date('2015-08-07', format = "%Y-%m-%d")
-enddate = today()
-s = seq(startdate, enddate, by="days")
-
-completeness = hr_data %>% group_by(dte = as.Date(time)) %>% summarise(comp = mean(hrate > 0))
-incomp.days = which(completeness$comp < .9)
-missing.days = which(s %in% completeness$dte == FALSE)
-days.to.process = c(incomp.days, missing.days)
-
-for (i in days.to.process) {
-  df = get_intraday_data(cookie, "heart-rate", date=sprintf("%s",s[i]))
-  names(df) = c("time","hrate")
+if (file.exists('data.csv')){
+  file.Df <- read.csv('data.csv')
   
-  # If the newly downloaded data are for a day already in
-  # the pre-existing dataframe, then the following applies:
-  
-  if (mean(df$time %in% hr_data$time) == 1) {
-    
-    # Get pct of nonzero hrate values in the pre-existing dataframe
-    # where the timestamp is the same
-    # as the current timestamp being processed in the for loop.
-    
-    pct.complete.of.local.day = mean(hr_data$hrate[yday(hr_data$time) == yday(s[i])] > 0)
-    
-    # Get pct of nonzero hrate values in the temporary dataframe
-    # where the timestamp is the same
-    # as the current timestamp being processed in the for loop.
-    
-    pct.complete.of.server.day = mean(df$hrate[yday(df$time) == yday(s[i])] > 0)
-    
-    # If the newly downloaded data are more complete for this day
-    # than what is pre-existing, overwrite the heart rate data
-    # for that day.
-    
-    if (pct.complete.of.local.day < pct.complete.of.server.day) {
-      rows = which(hr_data$time %in% df$time)
-      hr_data$hrate[rows] = df$hrate}
-  }
-  else {
-    
-    # If the newly downloaded data are for a day not already in
-    # the pre-existing dataframe, then use rbind to just add them!
-    
-    hr_data = rbind(hr_data, df)
-  }
-  rm(df)
+  start.date <- as.character(max(as.Date(file.Df$time)) + 1)
+
+} else {
+  start.date <- "2015-10-09"
 }
+
+if (start.date >= end.date){
+
+  cat('Data already current, come back tomorrow.')
+
+} else {
+  # Loop through available daily data
+  for (loggable in LOGGABLES) {
+    if (exists("total.data")) {
+      
+      loop.data <- as.data.frame(fitbitScraper::get_daily_data(
+        cookie,
+        loggable,
+        start_date="2015-10-09",
+        end_date=as.character(Sys.Date())
+      ))
+      loop.data$time <- as.character(as.Date(loop.data$time))
+      total.data <- merge(total.data, loop.data,by="time")
+      
+    } else {
+      
+      total.data <- as.data.frame(fitbitScraper::get_daily_data(
+        cookie,
+        loggable,
+        start_date="2015-10-09",
+        end_date=as.character(Sys.Date())
+      ))
+      total.data$time <- as.character(as.Date(total.data$time))
+    }
+  }
+
+  date.sequence <- as.character(seq(as.Date(start.date), as.Date(end.date), by = "day"))
+
+  # Gather Weight measurements
+  weight.data <- fitbitScraper::get_weight_data(
+    cookie,
+    start_date="2015-10-09",
+    end_date=end.date
+  )
+
+  weight.data$time <- as.character(as.Date(weight.data$time))
+
+  total.data <- merge(total.data, weight.data,by="time", all.x=TRUE)
+  
+  # Gather Sleep
+  #sleep.data <- fitbitScraper::get_sleep_data(
+  #  cookie,
+  #  start_date="2015-10-09",
+  #  end_date=end.date
+  #)
+
+  #total.data <- merge(total.data, sleep.data$df,by.x='time', by.y='date', all.x=TRUE)
+
+  if (exists('file.Df')) {
+    output <- rbind(file.Df, total.data)
+  } else {
+    output <- total.data
+  }
+
+  write.csv(total.data, file="data.csv", row.names=FALSE)
+}
+
+
