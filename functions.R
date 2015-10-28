@@ -2,12 +2,12 @@
 get.oauth.string <- function(clientID) {
   # construct string to put in GET request for authentication
   oauthString <- 
-    paste0("https://www.fitbit.com/oauth2/authorize?response_type=token",
-           "&client_id=",
+    paste0('https://www.fitbit.com/oauth2/authorize?response_type=token',
+           '&client_id=',
            clientID,
-           "&redirect_uri=http%3A%2F%2Flocalhost%3A1410",
-           "&scope=activity%20nutrition%20heartrate%20location%20nutrition%20profile%20settings%20sleep%20social%20weight",
-           "&expires_in=604800")
+           '&redirect_uri=http%3A%2F%2Flocalhost%3A1410',
+           '&scope=activity%20nutrition%20heartrate%20location%20nutrition%20profile%20settings%20sleep%20social%20weight',
+           '&expires_in=604800')
   # print out the generated string
   return(oauthString)
 }
@@ -24,7 +24,17 @@ get.data <- function(token, getString) {
   accessToken <- paste('Bearer', token, sep=' ')
   
   # make the request
-  request <- GET(getString, add_headers("Authorization"=accessToken))
+  request <- GET(getString, add_headers('Authorization'=accessToken))
   
   return(content(request))
+}
+
+pkgTest <- function(x)
+{
+  if (!require(x,character.only=TRUE))
+  {
+    install.packages(x,dep=TRUE)
+    if(!require(x,character.only=TRUE)) stop('Package not found')
+  }
+  library(x,character.only=TRUE)
 }

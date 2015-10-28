@@ -3,6 +3,7 @@ library(httr)
 
 source('settings.R')
 source('functions.R')
+source('dev.R')
 
 Sys.setenv(http_proxy='http://proxyarray.mazdausa.com:80')
 Sys.setenv(https_proxy='http://proxyarray.mazdausa.com:80')
