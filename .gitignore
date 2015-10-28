@@ -1,4 +1,5 @@
 # History files
+.Rproj.user
 .Rhistory
 .Rapp.history
 
@@ -13,3 +14,7 @@
 # produced vignettes
 vignettes/*.html
 vignettes/*.pdf
+
+# Other files
+.httr-oauth
+env
