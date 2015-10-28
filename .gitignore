@@ -18,7 +18,9 @@ vignettes/*.pdf
 # Special Files
 secrets.R
 settings.R
+dev.R
 .httr-oauth
 .project
 .settings*
 env
+*~
