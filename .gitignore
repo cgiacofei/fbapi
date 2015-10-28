@@ -17,3 +17,8 @@ vignettes/*.pdf
 
 # Special Files
 secrets.R
+settings.R
+.httr-oauth
+.project
+.settings*
+
