@@ -12,9 +12,9 @@
 .Rproj
 .Rout
 
-# produced vignettes
-vignettes/*.html
-vignettes/*.pdf
+# produced images
+images/*.html
+images/*.pdf
 
 # Special Files
 secrets.R
