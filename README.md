@@ -28,6 +28,10 @@ Authentication is performed using method found here: http://blog.numbersinlife.c
 4. The browser will say the requested page is not available, but there will be an URL in the address field (the URL will start with http://localhost:1410/). Copy and paste the returned url somewhere.
 5. Find "access_token=" in it and copy the long string after the equals sign.
 6. Add word "Bearer" in front. 
-7. Save to a variable (called **token** in read.R) to use later. ```token <- 'Bearer <long string from URL>'```
+7. Save to a variable (called **token** in read.R) to use later.
+
+```Rscript  
+token <- 'Bearer <long string from URL>'
+```
 
 ## TODO
