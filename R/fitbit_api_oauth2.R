@@ -1,3 +1,9 @@
+#------------------------------------------------------------------------------
+# fitbit_api_oauth2.R
+#
+# Functions for authenticating with Fitbit and parsing data
+#------------------------------------------------------------------------------
+
 source('R/dev.R')
 source('R/functions.R')
 pkgTest('httr') # load package for http communication
@@ -19,9 +25,11 @@ RESOURCES <- c(
   nutrition='foods/log'
 )
 
+API_URL <- 'https://api.fitbit.com/1/user/-/'
+
 api_auth <- function(clientID){
   # construct string to put in GET request for authentication
-  oauthString <- 
+  oauthString <-
     paste0("https://www.fitbit.com/oauth2/authorize?response_type=token",
            "&client_id=",
            clientID,
@@ -32,101 +40,119 @@ api_auth <- function(clientID){
   cat(oauthString)
 }
 
-resource_get <- function(what, date.start, date.end, token){
-  API_URL <- 'https://api.fitbit.com/1/user/-/'
-  
-  dateRange <- paste(date.start, date.end, sep='/')
-  
-  
-  
-  if (what == 'nutrition'){
-    dates = seq(from=as.Date(date.start), to=as.Date(date.end), by=1)
-    for (date in as.character(as.Date(dates))) {
-      url <- paste(API_URL, RESOURCES[[what]],'/date/', date, '.json', sep='')
-      request <- GET(url, add_headers("Authorization"= token))
-
-      if (!exists('fb.df')) {
-        fb.df <- as.data.frame(content(request)$summary)
-        fb.df$time <- date
-      } else {
-        nutrition.row <- as.data.frame(content(request)$summary)
-        nutrition.row$time <- date
-        
-        fb.df <- rbind(fb.df, nutrition.row)
-      }
-    }
-
-  } else {
-    url <- paste(API_URL, RESOURCES[[what]],'/date/', dateRange, '.json', sep='')
-    # make the request
-    request <- GET(url, add_headers("Authorization"= token))
-    
-    if (what == 'heartRate'){
-      
-      data <- jsonlite::fromJSON(jsonlite::toJSON(content(request)))
-      fb.df <- data$`activities-heart`[1]
-      fb.df$RHR <- data[[1]]$value$restingHeartRate
-      names(fb.df) <- c('time', what)
-      fb.df$time <- as.character(fb.df$time, is.factor=FALSE)
-      
-    } else if (what == 'weight') {
-      
-      fb.df <- as.data.frame(do.call(rbind, content(request)[[1]]))
-      fb.df <- subset(fb.df, select=c(date, bmi, weight))
-      names(fb.df)[names(fb.df) == 'date'] <- 'time'
-      fb.df$time <- as.character(fb.df$time, is.factor=FALSE)
-      
-    } else {
-      
-      fb.df <- as.data.frame(do.call(rbind, content(request)[[1]]))
-      fb.df$dateTime <- as.character(fb.df$dateTime, is.factor=FALSE)
-      names(fb.df) <- c('time', what)
-      
-    }
-    fb.df[2:NCOL(fb.df)] <-as.numeric(unlist(fb.df[2:NCOL(fb.df)]))
-  }
-
-  
-  return(fb.df)
-}
-
-api_get <- function(date.start, date.end, token){
-  # Scrape data from fitbit website
+get_activity <- function(what, date.start, date.end, token){
+  # Fetch Fitbit activity time series data
   #
   # Inputs:
-  #  - date.start: Start of date range
-  #  - date.end:   End of date range
-  #  - token:      Authentication token from fitbit_auth()
+  #  - what:       Resource name to pull
+  #  - date.start: First date in range to pull
+  #  - date.end:   Last date in range to pull
+  #  - token:      OAuth2.0 access token
 
-  LOGGABLES <- c(
-    'calorieOut',
-    'activityCalories',
-    'steps',
-    'distance',
-    'floors',
-    'minutesSedentary',
-    'minutesLightly',
-    'minutesFairly',
-    'minutesVery',
-    'heartRate',
-    'weight',
-    'nutrition'
-  )
+  dateRange <- paste(date.start, date.end, sep='/')
 
-  for (loggable in LOGGABLES) {
-    cat(paste('Fetching', loggable, '.....\n'))
-    if (exists('total.data')) {
+  url <- paste(API_URL, RESOURCES[[what]],'/date/', dateRange, '.json', sep='')
+  request <- GET(url, add_headers("Authorization"= token))
 
-      loop.data <- resource_get(loggable, date.start, date.end, token)
-      total.data <- merge(total.data, loop.data,by="time", all.x=TRUE)
-      cat(paste(loggable, 'Data merged.\n'))
+  nutrition.df <- as.data.frame(do.call(rbind, content(request)[[1]]))
+  nutrition.df$dateTime <- as.character(nutrition.df$dateTime, is.factor=FALSE)
 
-    } else {
+  names(nutrition.df) <- c('time', what)
 
-      total.data <- resource_get(loggable, date.start, date.end, token)
-      cat('New dataset started.\n')
+  nutrition.df[2:NCOL(nutrition.df)] <-as.numeric(unlist(nutrition.df[2:NCOL(nutrition.df)]))
+
+  return(nutrition.df)
+}
+
+get_heart <- function(date.start, date.end, token){
+  # Fetch Fitbit heart rate data
+  #
+  # Inputs:
+  #  - date.start: First date in range to pull
+  #  - date.end:   Last date in range to pull
+  #  - token:      OAuth2.0 access token
+
+  what <- 'heartRate'
+  dateRange <- paste(date.start, date.end, sep='/')
+
+  url <- paste(API_URL, RESOURCES[[what]],'/date/', dateRange, '.json', sep='')
+  request <- GET(url, add_headers("Authorization"= token))
+
+  # This seems hacky but it works.
+  data <- jsonlite::fromJSON(jsonlite::toJSON(content(request)))
+
+  # Extract resting heart rate.
+  # Eventually want heart rate zone data but that will take some
+  # additional processing.
+  nutrition.df <- data$`activities-heart`[1]
+  nutrition.df$RHR <- data[[1]]$value$restingHeartRate
+
+  names(nutrition.df) <- c('time', what)
+  nutrition.df$time <- as.character(nutrition.df$time, is.factor=FALSE)
+
+  nutrition.df[2:NCOL(nutrition.df)] <-as.numeric(unlist(nutrition.df[2:NCOL(nutrition.df)]))
+
+  return(nutrition.df)
+}
+
+get_weight <- function(date.start, date.end, token){
+  # Fetch Fitbit weight data
+  #
+  # Inputs:
+  #  - date.start: First date in range to pull
+  #  - date.end:   Last date in range to pull
+  #  - token:      OAuth2.0 access token
+
+  what <- 'weight'
+  dateRange <- paste(date.start, date.end, sep='/')
+
+  url <- paste(API_URL, RESOURCES[[what]],'/date/', dateRange, '.json', sep='')
+  request <- GET(url, add_headers("Authorization"= token))
+
+  nutrition.df <- as.data.frame(do.call(rbind, content(request)[[1]]))
+
+  # Weight data also includes some extra stuff we don't need.
+  nutrition.df <- subset(nutrition.df, select=c(date, bmi, weight))
+
+  names(nutrition.df)[names(nutrition.df) == 'date'] <- 'time'
+  nutrition.df$time <- as.character(nutrition.df$time, is.factor=FALSE)
+
+  nutrition.df[2:NCOL(nutrition.df)] <-as.numeric(unlist(nutrition.df[2:NCOL(nutrition.df)]))
+
+  return(nutrition.df)
+}
+
+get_nutrition <- function(date.start, date.end, token){
+  # Fetch Fitbit nutrition data
+  #
+  # Inputs:
+  #  - date.start: First date in range to pull
+  #  - date.end:   Last date in range to pull
+  #  - token:      OAuth2.0 access token
+
+  what <- 'nutrition'
+
+  # Need to fetch each day individually so make a list of dates to pull
+  dates = seq(from=as.Date(date.start), to=as.Date(date.end), by=1)
+
+  for (date in as.character(as.Date(dates))) {
+    url <- paste(API_URL, RESOURCES[[what]],'/date/', date, '.json', sep='')
+    request <- GET(url, add_headers("Authorization"= token))
+
+    # First time through loop, create nutrition.df
+    if (!exists('nutrition.df')) {
+      nutrition.df <- as.data.frame(content(request)$summary)
+      nutrition.df$time <- date
+      cat(paste('Make row', date, '\n'))
+    } else { # Append to nutrition.df
+      nutrition.row <- as.data.frame(content(request)$summary)
+      nutrition.row$time <- date
+
+      cat(paste('Bind row', date, '\n'))
+      nutrition.df <- rbind(nutrition.df, nutrition.row)
     }
   }
+  #nutrition.df[2:NCOL(nutrition.df)] <-as.numeric(unlist(nutrition.df[2:NCOL(nutrition.df)]))
 
-  return(total.data)
+  return(nutrition.df)
 }
