@@ -35,7 +35,7 @@ token <- 'Bearer <long string from URL>'
 ```
 
 ## TODO
-- [] Sleep data import
-  - [] Parsing json data
-  - [] Summarize by day
-- [] FitNotes data parsing
+- [ ] Sleep data import
+  - [ ] Parsing json data
+  - [ ] Summarize by day
+- [ ] FitNotes data parsing
