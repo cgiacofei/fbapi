@@ -10,9 +10,10 @@
 .Rproj.user/
 .RData
 .Rproj
-.Rout
+*.Rout
 
 # produced images
+images
 images/*.html
 images/*.pdf
 
@@ -26,3 +27,10 @@ dev.R
 env
 *~
 *.csv
+
+# latex files
+*.aux
+*.fdb_latexmk
+*.fls
+*.log
+*.pdf
