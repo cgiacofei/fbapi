@@ -4,11 +4,7 @@
 # Functions for authenticating with Fitbit and parsing data
 #------------------------------------------------------------------------------
 
-source('R/dev.R')
 source('R/functions.R')
-pkgTest('httr') # load package for http communication
-pkgTest('plyr')
-pkgTest('reshape2')
 
 RESOURCES <- c(
   calorieOut='activities/calories',
@@ -52,9 +48,9 @@ get_activity <- function(what, date.start, date.end, token){
   dateRange <- paste(date.start, date.end, sep='/')
 
   url <- paste(API_URL, RESOURCES[[what]],'/date/', dateRange, '.json', sep='')
-  request <- GET(url, add_headers("Authorization"= token))
+  request <- httr::GET(url, add_headers("Authorization"= token))
 
-  nutrition.df <- as.data.frame(do.call(rbind, content(request)[[1]]))
+  nutrition.df <- as.data.frame(do.call(rbind, httr::content(request)[[1]]))
   nutrition.df$dateTime <- as.character(nutrition.df$dateTime, is.factor=FALSE)
 
   names(nutrition.df) <- c('time', what)
@@ -76,10 +72,10 @@ get_heart <- function(date.start, date.end, token){
   dateRange <- paste(date.start, date.end, sep='/')
 
   url <- paste(API_URL, RESOURCES[[what]],'/date/', dateRange, '.json', sep='')
-  request <- GET(url, add_headers("Authorization"= token))
+  request <- httr::GET(url, add_headers("Authorization"= token))
 
   # This seems hacky but it works.
-  data <- jsonlite::fromJSON(jsonlite::toJSON(content(request)))
+  data <- jsonlite::fromJSON(jsonlite::toJSON(httr::content(request)))
 
   # Extract resting heart rate.
   # Eventually want heart rate zone data but that will take some
@@ -107,9 +103,9 @@ get_weight <- function(date.start, date.end, token){
   dateRange <- paste(date.start, date.end, sep='/')
 
   url <- paste(API_URL, RESOURCES[[what]],'/date/', dateRange, '.json', sep='')
-  request <- GET(url, add_headers("Authorization"= token))
+  request <- httr::GET(url, add_headers("Authorization"= token))
 
-  nutrition.df <- as.data.frame(do.call(rbind, content(request)[[1]]))
+  nutrition.df <- as.data.frame(do.call(rbind, httr::content(request)[[1]]))
 
   # Weight data also includes some extra stuff we don't need.
   nutrition.df <- subset(nutrition.df, select=c(date, bmi, weight))
@@ -137,15 +133,15 @@ get_nutrition <- function(date.start, date.end, token){
 
   for (date in as.character(as.Date(dates))) {
     url <- paste(API_URL, RESOURCES[[what]],'/date/', date, '.json', sep='')
-    request <- GET(url, add_headers("Authorization"= token))
+    request <- httr::GET(url, add_headers("Authorization"= token))
 
     # First time through loop, create nutrition.df
     if (!exists('nutrition.df')) {
-      nutrition.df <- as.data.frame(content(request)$summary)
+      nutrition.df <- as.data.frame(httr::content(request)$summary)
       nutrition.df$time <- date
       cat(paste('Make row', date, '\n'))
     } else { # Append to nutrition.df
-      nutrition.row <- as.data.frame(content(request)$summary)
+      nutrition.row <- as.data.frame(httr::content(request)$summary)
       nutrition.row$time <- date
 
       cat(paste('Bind row', date, '\n'))
