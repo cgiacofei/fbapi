@@ -24,12 +24,13 @@ RESOURCES <- c(
 #' @param what Resource name to pull
 #' @param date.start First date in range to pull
 #' @param date.end Last date in range to pull
-#' @param token OAuth2.0 access token
 #'
 #' @return dataframe
 #'
 #' @export
-pull_data <- function(what, date.start, date.end, token){
+pull_data <- function(what, date.start, date.end){
+
+  token <- read_token()
 
     # Need to fetch each day individually so make a list of dates to pull
   if (is.null(date.end )) {
@@ -49,14 +50,13 @@ pull_data <- function(what, date.start, date.end, token){
 #' @param what Resource name to pull
 #' @param date.start First date in range to pull
 #' @param date.end Last date in range to pull
-#' @param token OAuth2.0 access token
 #'
 #' @return dataframe
 #'
 #' @export
-get_activity <- function(what, date.start, date.end, token){
+get_activity <- function(what, date.start, date.end){
 
-  content <- pull_data(what, date.start, date.end, token)
+  content <- pull_data(what, date.start, date.end)
 
   nutrition.df <- as.data.frame(do.call(rbind, content[[1]]))
   nutrition.df$dateTime <- as.character(nutrition.df$dateTime, is.factor=FALSE)
@@ -72,14 +72,13 @@ get_activity <- function(what, date.start, date.end, token){
 #'
 #' @param date.start First date in range to pull
 #' @param date.end Last date in range to pull
-#' @param token OAuth2.0 access token
 #'
 #' @return dataframe
 #'
 #' @export
-get_heart <- function(date.start, date.end, token){
+get_heart <- function(date.start, date.end){
 
-  content <- pull_data('heartRate', date.start, date.end, token)
+  content <- pull_data('heartRate', date.start, date.end)
 
   # This seems hacky but it works.
   data <- jsonlite::fromJSON(jsonlite::toJSON(content))
@@ -90,7 +89,7 @@ get_heart <- function(date.start, date.end, token){
   nutrition.df <- data$`activities-heart`[1]
   nutrition.df$RHR <- data[[1]]$value$restingHeartRate
 
-  names(nutrition.df) <- c('time', what)
+  names(nutrition.df) <- c('time', 'heartRate')
   nutrition.df$time <- as.character(nutrition.df$time, is.factor=FALSE)
 
   nutrition.df[2:NCOL(nutrition.df)] <-as.numeric(unlist(nutrition.df[2:NCOL(nutrition.df)]))
@@ -102,20 +101,19 @@ get_heart <- function(date.start, date.end, token){
 #'
 #' @param date.start First date in range to pull
 #' @param date.end Last date in range to pull
-#' @param token OAuth2.0 access token
 #'
 #' @return dataframe
 #'
 #' @export
-get_weight <- function(date.start, date.end, token){
+get_weight <- function(date.start, date.end){
 
-  content <- pull_data('weight', date.start, date.end, token)
+  content <- pull_data('weight', date.start, date.end)
 
   nutrition.df <- as.data.frame(do.call(rbind, content[[1]]))
 
   # Weight data also includes some extra stuff we don't need.
   myCols <- c('date', 'bmi', 'weight')
-  colNums <- match(myCols,names(mtcars))
+  colNums <- match(myCols,names(nutrition.df))
   nutrition.df <- dplyr::select(nutrition.df, colNums)
 
   names(nutrition.df)[names(nutrition.df) == 'date'] <- 'time'
@@ -130,19 +128,17 @@ get_weight <- function(date.start, date.end, token){
 #'
 #' @param date.start First date in range to pull
 #' @param date.end Last date in range to pull
-#' @param token OAuth2.0 access token
 #'
 #' @return dataframe
 #'
 #' @export
-get_nutrition <- function(date.start, date.end, token){
+get_nutrition <- function(date.start, date.end){
   what <- 'nutrition'
 
   # Need to fetch each day individually so make a list of dates to pull
   dates = seq(from=as.Date(date.start), to=as.Date(date.end), by=1)
-
   for (date in as.character(as.Date(dates))) {
-    content <- pull_data('nutrition', date.start, NULL, token)
+    content <- pull_data('nutrition', date, NULL)
 
     # First time through loop, create nutrition.df
     if (!exists('nutrition.df')) {
