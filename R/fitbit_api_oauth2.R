@@ -19,30 +19,29 @@ RESOURCES <- c(
   nutrition='foods/log'
 )
 
-API_URL <- 'https://api.fitbit.com/1/user/-/'
-
-#' Print OAuth 2.0 URL
+#' Fetch Fitbit data
 #'
-#' Construct string to put in GET request for authentication
+#' @param what Resource name to pull
+#' @param date.start First date in range to pull
+#' @param date.end Last date in range to pull
+#' @param token OAuth2.0 access token
 #'
-#' @param clientID OAuth 2.0 client ID from Fitbit App Manager
-#'
-#' @return None
-#'
-#' @examples
-#' api_auth('23RRV4')
+#' @return dataframe
 #'
 #' @export
-api_auth <- function(clientID){
-  oauthString <-
-    paste0("https://www.fitbit.com/oauth2/authorize?response_type=token",
-           "&client_id=",
-           clientID,
-           "&redirect_uri=http%3A%2F%2Flocalhost%3A1410",
-           "&scope=activity%20nutrition%20heartrate%20location%20nutrition%20profile%20settings%20sleep%20social%20weight",
-           "&expires_in=604800")
-  # print out the generated string
-  cat(oauthString)
+pull_data <- function(what, date.start, date.end, token){
+
+    # Need to fetch each day individually so make a list of dates to pull
+  if (is.null(date.end )) {
+    dateRange = date.start
+  } else {
+    dateRange <- paste(date.start, date.end, sep='/')
+  }
+
+  url <- paste(API_URL, RESOURCES[[what]],'/date/', dateRange, '.json', sep='')
+  request <- httr::GET(url, httr::add_headers("Authorization"= token))
+
+  return(httr::content(request))
 }
 
 #' Fetch Fitbit activity time series data
@@ -57,12 +56,9 @@ api_auth <- function(clientID){
 #' @export
 get_activity <- function(what, date.start, date.end, token){
 
-  dateRange <- paste(date.start, date.end, sep='/')
+  content <- pull_data(what, date.start, date.end, token)
 
-  url <- paste(API_URL, RESOURCES[[what]],'/date/', dateRange, '.json', sep='')
-  request <- httr::GET(url, httr::add_headers("Authorization"= token))
-
-  nutrition.df <- as.data.frame(do.call(rbind, httr::content(request)[[1]]))
+  nutrition.df <- as.data.frame(do.call(rbind, content[[1]]))
   nutrition.df$dateTime <- as.character(nutrition.df$dateTime, is.factor=FALSE)
 
   names(nutrition.df) <- c('time', what)
@@ -83,14 +79,10 @@ get_activity <- function(what, date.start, date.end, token){
 #' @export
 get_heart <- function(date.start, date.end, token){
 
-  what <- 'heartRate'
-  dateRange <- paste(date.start, date.end, sep='/')
-
-  url <- paste(API_URL, RESOURCES[[what]],'/date/', dateRange, '.json', sep='')
-  request <- httr::GET(url, httr::add_headers("Authorization"= token))
+  content <- pull_data('heartRate', date.start, date.end, token)
 
   # This seems hacky but it works.
-  data <- jsonlite::fromJSON(jsonlite::toJSON(httr::content(request)))
+  data <- jsonlite::fromJSON(jsonlite::toJSON(content))
 
   # Extract resting heart rate.
   # Eventually want heart rate zone data but that will take some
@@ -116,13 +108,10 @@ get_heart <- function(date.start, date.end, token){
 #'
 #' @export
 get_weight <- function(date.start, date.end, token){
-  what <- 'weight'
-  dateRange <- paste(date.start, date.end, sep='/')
 
-  url <- paste(API_URL, RESOURCES[[what]],'/date/', dateRange, '.json', sep='')
-  request <- httr::GET(url, httr::add_headers("Authorization"= token))
+  content <- pull_data('weight', date.start, date.end, token)
 
-  nutrition.df <- as.data.frame(do.call(rbind, httr::content(request)[[1]]))
+  nutrition.df <- as.data.frame(do.call(rbind, content[[1]]))
 
   # Weight data also includes some extra stuff we don't need.
   myCols <- c('date', 'bmi', 'weight')
@@ -153,16 +142,15 @@ get_nutrition <- function(date.start, date.end, token){
   dates = seq(from=as.Date(date.start), to=as.Date(date.end), by=1)
 
   for (date in as.character(as.Date(dates))) {
-    url <- paste(API_URL, RESOURCES[[what]],'/date/', date, '.json', sep='')
-    request <- httr::GET(url, httr::add_headers("Authorization"= token))
+    content <- pull_data('nutrition', date.start, NULL, token)
 
     # First time through loop, create nutrition.df
     if (!exists('nutrition.df')) {
-      nutrition.df <- as.data.frame(httr::content(request)$summary)
+      nutrition.df <- as.data.frame(content$summary)
       nutrition.df$time <- date
       cat(paste('Make row', date, '\n'))
     } else { # Append to nutrition.df
-      nutrition.row <- as.data.frame(httr::content(request)$summary)
+      nutrition.row <- as.data.frame(content$summary)
       nutrition.row$time <- date
 
       cat(paste('Bind row', date, '\n'))
