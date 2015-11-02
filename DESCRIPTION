@@ -2,7 +2,11 @@ Package: fbapi
 Title: Wrapper for Fitbit API
 Version: 0.1
 Authors@R: person("First", "Last", email = "c.giacofei@gmail.com", role = c("aut", "cre"))
-Description: Provide functions for authenticating with and extracting data from the Fitbit API
+Description: Provide functions for authenticating with and extracting data from the Fitbit API.
 Depends: R (>= 3.2.2)
 License: MIT + file LICENSE
 LazyData: true
+Imports:
+    httr,
+    jsonlite,
+    dplyr
