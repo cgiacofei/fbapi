@@ -6,7 +6,8 @@ Description: Provide functions for authenticating with and extracting data from 
 Depends: R (>= 3.2.2)
 License: MIT + file LICENSE
 LazyData: true
-Imports:
+Imports: 
   httr,
   jsonlite,
   dplyr
+Suggests: testthat
