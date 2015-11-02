@@ -23,8 +23,19 @@ RESOURCES <- c(
 
 API_URL <- 'https://api.fitbit.com/1/user/-/'
 
+#' Print OAuth 2.0 URL
+#'
+#' Construct string to put in GET request for authentication
+#'
+#' @param clientID OAuth 2.0 client ID from Fitbit App Manager
+#'
+#' @return None
+#'
+#' @examples
+#' api_auth('23RRV4')
+#'
+#' @export
 api_auth <- function(clientID){
-  # construct string to put in GET request for authentication
   oauthString <-
     paste0("https://www.fitbit.com/oauth2/authorize?response_type=token",
            "&client_id=",
@@ -36,6 +47,16 @@ api_auth <- function(clientID){
   cat(oauthString)
 }
 
+#' Fetch Fitbit activity time series data
+#'
+#' @param what Resource name to pull
+#' @param date.start First date in range to pull
+#' @param date.end Last date in range to pull
+#' @param token OAuth2.0 access token
+#'
+#' @return dataframe
+#'
+#' @export
 get_activity <- function(what, date.start, date.end, token){
   # Fetch Fitbit activity time series data
   #
@@ -60,6 +81,15 @@ get_activity <- function(what, date.start, date.end, token){
   return(nutrition.df)
 }
 
+#' Fetch Fitbit heart rate data
+#'
+#' @param date.start First date in range to pull
+#' @param date.end Last date in range to pull
+#' @param token OAuth2.0 access token
+#'
+#' @return dataframe
+#'
+#' @export
 get_heart <- function(date.start, date.end, token){
   # Fetch Fitbit heart rate data
   #
@@ -91,6 +121,15 @@ get_heart <- function(date.start, date.end, token){
   return(nutrition.df)
 }
 
+#' Fetch Fitbit weight data
+#'
+#' @param date.start First date in range to pull
+#' @param date.end Last date in range to pull
+#' @param token OAuth2.0 access token
+#'
+#' @return dataframe
+#'
+#' @export
 get_weight <- function(date.start, date.end, token){
   # Fetch Fitbit weight data
   #
@@ -118,6 +157,15 @@ get_weight <- function(date.start, date.end, token){
   return(nutrition.df)
 }
 
+#' Fetch Fitbit nutrition data
+#'
+#' @param date.start First date in range to pull
+#' @param date.end Last date in range to pull
+#' @param token OAuth2.0 access token
+#'
+#' @return dataframe
+#'
+#' @export
 get_nutrition <- function(date.start, date.end, token){
   # Fetch Fitbit nutrition data
   #
