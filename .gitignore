@@ -1,5 +1,4 @@
 # History files
-.Rproj.user
 .Rhistory
 .Rapp.history
 
@@ -8,29 +7,7 @@
 
 # RStudio files
 .Rproj.user/
-.RData
-.Rproj
-*.Rout
 
-# produced images
-images
-images/*.html
-images/*.pdf
-
-# Special Files
-secrets.R
-settings.R
-dev.R
-.httr-oauth
-.project
-.settings*
-env
-*~
-*.csv
-
-# latex files
-*.aux
-*.fdb_latexmk
-*.fls
-*.log
-*.pdf
+# produced vignettes
+vignettes/*.html
+vignettes/*.pdf
