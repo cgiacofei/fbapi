@@ -42,7 +42,7 @@ pull_data <- function(what, date.start, date.end){
   url <- paste(API_URL, RESOURCES[[what]],'/date/', dateRange, '.json', sep='')
   request <- httr::GET(url, httr::add_headers("Authorization"= token))
 
-  return(httr::content(request))
+  return(jsonlite::toJSON(httr::content(request)))
 }
 
 #' Fetch Fitbit activity time series data
@@ -56,9 +56,9 @@ pull_data <- function(what, date.start, date.end){
 #' @export
 get_activity <- function(what, date.start, date.end){
 
-  content <- pull_data(what, date.start, date.end)
+  content <- jsonlite::fromJSON(pull_data(what, date.start, date.end))
 
-  nutrition.df <- as.data.frame(do.call(rbind, content[[1]]))
+  nutrition.df <- as.data.frame(content[[1]])
   nutrition.df$dateTime <- as.character(nutrition.df$dateTime, is.factor=FALSE)
 
   names(nutrition.df) <- c('time', what)
@@ -78,16 +78,13 @@ get_activity <- function(what, date.start, date.end){
 #' @export
 get_heart <- function(date.start, date.end){
 
-  content <- pull_data('heartRate', date.start, date.end)
-
-  # This seems hacky but it works.
-  data <- jsonlite::fromJSON(jsonlite::toJSON(content))
+  content <- jsonlite::fromJSON(pull_data('heartRate', date.start, date.end))
 
   # Extract resting heart rate.
   # Eventually want heart rate zone data but that will take some
   # additional processing.
-  nutrition.df <- data$`activities-heart`[1]
-  nutrition.df$RHR <- data[[1]]$value$restingHeartRate
+  nutrition.df <- content$`activities-heart`[1]
+  nutrition.df$RHR <- content[[1]]$value$restingHeartRate
 
   names(nutrition.df) <- c('time', 'heartRate')
   nutrition.df$time <- as.character(nutrition.df$time, is.factor=FALSE)
@@ -107,9 +104,9 @@ get_heart <- function(date.start, date.end){
 #' @export
 get_weight <- function(date.start, date.end){
 
-  content <- pull_data('weight', date.start, date.end)
+  content <- jsonlite::fromJSON(pull_data('weight', date.start, date.end))
 
-  nutrition.df <- as.data.frame(do.call(rbind, content[[1]]))
+  nutrition.df <- as.data.frame(content$weight)
 
   # Weight data also includes some extra stuff we don't need.
   myCols <- c('date', 'bmi', 'weight')
@@ -133,12 +130,11 @@ get_weight <- function(date.start, date.end){
 #'
 #' @export
 get_nutrition <- function(date.start, date.end){
-  what <- 'nutrition'
 
   # Need to fetch each day individually so make a list of dates to pull
   dates = seq(from=as.Date(date.start), to=as.Date(date.end), by=1)
   for (date in as.character(as.Date(dates))) {
-    content <- pull_data('nutrition', date, NULL)
+    content <- jsonlite::fromJSON(pull_data('nutrition', date, NULL))
 
     # First time through loop, create nutrition.df
     if (!exists('nutrition.df')) {
