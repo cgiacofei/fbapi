@@ -104,7 +104,7 @@ get_heart <- function(date.start, date.end){
 #' @export
 get_weight <- function(date.start, date.end){
 
-  content <- pull_data('weight', date.start, date.end)
+  content <- jsonlite::fromJSON(pull_data('weight', date.start, date.end))
 
   nutrition.df <- as.data.frame(content$weight)
 
@@ -130,12 +130,11 @@ get_weight <- function(date.start, date.end){
 #'
 #' @export
 get_nutrition <- function(date.start, date.end){
-  what <- 'nutrition'
 
   # Need to fetch each day individually so make a list of dates to pull
   dates = seq(from=as.Date(date.start), to=as.Date(date.end), by=1)
   for (date in as.character(as.Date(dates))) {
-    content <- pull_data('nutrition', date, NULL)
+    content <- jsonlite::fromJSON(pull_data('nutrition', date, NULL))
 
     # First time through loop, create nutrition.df
     if (!exists('nutrition.df')) {
