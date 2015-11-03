@@ -21,6 +21,9 @@ RESOURCES <- c(
 
 #' Fetch Fitbit data
 #'
+#' Pulls data from the speicified date range.  Nutrition data is pulled only
+#' one day at a time based on the given date.start value.
+#'
 #' @param what Resource name to pull
 #' @param date.start First date in range to pull
 #' @param date.end Last date in range to pull
@@ -28,127 +31,116 @@ RESOURCES <- c(
 #' @return dataframe
 #'
 #' @export
-pull_data <- function(what, date.start, date.end){
-
+get <- function(what, date.start, date.end){
   token <- read_token()
-
-    # Need to fetch each day individually so make a list of dates to pull
-  if (is.null(date.end )) {
-    dateRange = date.start
+  
+  if (what == 'nutrition') {
+    dateRange <- date.start
   } else {
     dateRange <- paste(date.start, date.end, sep='/')
   }
 
-  url <- paste(API_URL, RESOURCES[[what]],'/date/', dateRange, '.json', sep='')
+  url <- paste(API_URL, what, '/date/', dateRange, '.json', sep='')
   request <- httr::GET(url, httr::add_headers("Authorization"= token))
 
-  return(jsonlite::toJSON(httr::content(request)))
+  data <- jsonlite::toJSON(httr::content(request))
+
+  if (what == 'heartRate') {
+    pretty.Df <- parse_heart(data)
+
+  } else if (what == 'weight') {
+    pretty.Df <- parse_weight(data)
+
+  } else if (what == 'nutrition') {
+    pretty.Df <- parse_nutrition(data, dateRange)
+
+  } else {
+    pretty.Df <- parse_activity(data)
+
+  }
+  
+  return(pretty.Df)
 }
 
-#' Fetch Fitbit activity time series data
+#' Parse Fitbit activity time series data
 #'
-#' @param what Resource name to pull
-#' @param date.start First date in range to pull
-#' @param date.end Last date in range to pull
+#' @param data API return content parsed from JSON.
 #'
 #' @return dataframe
 #'
 #' @export
-get_activity <- function(what, date.start, date.end){
+parse_activity <- function(data)
 
-  content <- jsonlite::fromJSON(pull_data(what, date.start, date.end))
-
-  nutrition.df <- as.data.frame(content[[1]])
-  nutrition.df$dateTime <- as.character(nutrition.df$dateTime, is.factor=FALSE)
+  activity.df <- as.data.frame(data[[1]])
+  activity.df$dateTime <- as.character(activity.df$dateTime, is.factor=FALSE)
 
   names(nutrition.df) <- c('time', what)
 
-  nutrition.df[2:NCOL(nutrition.df)] <-as.numeric(unlist(nutrition.df[2:NCOL(nutrition.df)]))
+  activity.df[2:NCOL(activity.df)] <-as.numeric(unlist(activity.df[2:NCOL(activity.df)]))
 
-  return(nutrition.df)
+  return(activity.df)
 }
 
-#' Fetch Fitbit heart rate data
+#' Parse Fitbit heart rate data
 #'
-#' @param date.start First date in range to pull
-#' @param date.end Last date in range to pull
+#' @param data API return content parsed from JSON.
 #'
 #' @return dataframe
 #'
 #' @export
-get_heart <- function(date.start, date.end){
-
-  content <- jsonlite::fromJSON(pull_data('heartRate', date.start, date.end))
+parse_heart <- function(data){
 
   # Extract resting heart rate.
   # Eventually want heart rate zone data but that will take some
   # additional processing.
-  nutrition.df <- content$`activities-heart`[1]
-  nutrition.df$RHR <- content[[1]]$value$restingHeartRate
+  heart.df <- data$`activities-heart`[1]
+  heart.df$RHR <- content[[1]]$value$restingHeartRate
 
-  names(nutrition.df) <- c('time', 'heartRate')
-  nutrition.df$time <- as.character(nutrition.df$time, is.factor=FALSE)
+  names(heart.df) <- c('time', 'heartRate')
+  heart.df$time <- as.character(heart.df$time, is.factor=FALSE)
 
-  nutrition.df[2:NCOL(nutrition.df)] <-as.numeric(unlist(nutrition.df[2:NCOL(nutrition.df)]))
+  heart.df[2:NCOL(heart.df)] <-as.numeric(unlist(heart.df[2:NCOL(heart.df)]))
 
   return(nutrition.df)
 }
 
-#' Fetch Fitbit weight data
+#' Parse Fitbit weight data
 #'
-#' @param date.start First date in range to pull
-#' @param date.end Last date in range to pull
+#' @param data API return content parsed from JSON.
 #'
 #' @return dataframe
 #'
 #' @export
-get_weight <- function(date.start, date.end){
+parse_weight <- function(data){
 
-  content <- jsonlite::fromJSON(pull_data('weight', date.start, date.end))
-
-  nutrition.df <- as.data.frame(content$weight)
+  weight.df <- as.data.frame(data$weight)
 
   # Weight data also includes some extra stuff we don't need.
   myCols <- c('date', 'bmi', 'weight')
-  colNums <- match(myCols,names(nutrition.df))
-  nutrition.df <- dplyr::select(nutrition.df, colNums)
+  colNums <- match(myCols,names(weight.df))
+  weight.df <- dplyr::select(weight.df, colNums)
 
-  names(nutrition.df)[names(nutrition.df) == 'date'] <- 'time'
-  nutrition.df$time <- as.character(nutrition.df$time, is.factor=FALSE)
+  names(weight.df)[names(weight.df) == 'date'] <- 'time'
+  weight.df$time <- as.character(weight.df$time, is.factor=FALSE)
 
-  nutrition.df[2:NCOL(nutrition.df)] <-as.numeric(unlist(nutrition.df[2:NCOL(nutrition.df)]))
+  weight.df[2:NCOL(weight.df)] <-as.numeric(unlist(weight.df[2:NCOL(weight.df)]))
 
-  return(nutrition.df)
+  return(weight.df)
 }
 
 #' Fetch Fitbit nutrition data
 #'
-#' @param date.start First date in range to pull
-#' @param date.end Last date in range to pull
+#' @param data API return content parsed from JSON.
+#' @param date date being parsed.
 #'
 #' @return dataframe
 #'
 #' @export
-get_nutrition <- function(date.start, date.end){
+parse_nutrition <- function(data, date){
 
-  # Need to fetch each day individually so make a list of dates to pull
-  dates = seq(from=as.Date(date.start), to=as.Date(date.end), by=1)
-  for (date in as.character(as.Date(dates))) {
-    content <- jsonlite::fromJSON(pull_data('nutrition', date, NULL))
+  nutrition.df <- as.data.frame(content$summary)
+  nutrition.df$time <- date
 
-    # First time through loop, create nutrition.df
-    if (!exists('nutrition.df')) {
-      nutrition.df <- as.data.frame(content$summary)
-      nutrition.df$time <- date
-      cat(paste('Make row', date, '\n'))
-    } else { # Append to nutrition.df
-      nutrition.row <- as.data.frame(content$summary)
-      nutrition.row$time <- date
-
-      cat(paste('Bind row', date, '\n'))
-      nutrition.df <- rbind(nutrition.df, nutrition.row)
-    }
-  }
   #nutrition.df[2:NCOL(nutrition.df)] <-as.numeric(unlist(nutrition.df[2:NCOL(nutrition.df)]))
 
   return(nutrition.df)
