@@ -17,6 +17,7 @@ pull_data <- function(what, date.start, date.end) {
 context('Test Data Parsing')
 
 test_that('activity data is correctly parsed', {
-  dummy <- get_activity('steps', NULL, NULL)
-  expect_true(exists('dummy'))
+  expect_that(nrow(get_activity('steps', NULL, NULL)), equals(8))
+  expect_that(ncol(get_activity('steps', NULL, NULL)), equals(2))
+  expect_that(mean(get_activity('steps', NULL, NULL)$value), equals(7316.5))
 })
