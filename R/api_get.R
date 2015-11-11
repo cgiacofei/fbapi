@@ -19,6 +19,37 @@ RESOURCES <- c(
   nutrition='foods/log'
 )
 
+#' Recursively build matrix of dates with 31 day ranges.
+#'
+#' Fitbit API only allows for pullig 31 days of data per call for some items.
+#' This function takes a date range and divides it into multiple ranges no more
+#' than 31 days in length.
+#'
+#' @param date.start First date in range to pull
+#' @param date.end Last date in range to pull
+#' @param dlist
+#'
+#' @return matrix of dates
+#'
+#' @export
+range_list <- function(date.start, date.end, dlist=NULL) {
+  date.start <- as.Date(date.start)
+  date.end <- as.Date(date.end)
+
+  if ((date.end - date.start) > 31) {
+    date.final <- date.end
+    date.end <- date.start + 30
+    dlist <- rbind(dlist, c(as.character(date.start), as.character(date.end)))
+    date.start <- date.end + 1
+
+    dlist <- range_list(date.start, date.final, dlist)
+  } else {
+    dlist <- rbind(dlist, c(as.character(date.start), as.character(date.end)))
+  }
+
+  return(dlist)
+}
+
 #' Fetch Fitbit data
 #'
 #' @param what Resource name to pull
@@ -59,6 +90,7 @@ get_activity <- function(what, date.start, date.end){
   content <- jsonlite::fromJSON(pull_data(what, date.start, date.end))
 
   nutrition.df <- as.data.frame(content[[1]])
+
   nutrition.df$dateTime <- as.character(nutrition.df$dateTime, is.factor=FALSE)
 
   names(nutrition.df) <- c('time', what)
@@ -103,22 +135,32 @@ get_heart <- function(date.start, date.end){
 #'
 #' @export
 get_weight <- function(date.start, date.end){
+  dates <- range_list(date.start, date.end)
 
-  content <- jsonlite::fromJSON(pull_data('weight', date.start, date.end))
+  weight.Df <- NULL
 
-  nutrition.df <- as.data.frame(content$weight)
+  for (i in c(1:NROW(dates))) {
+    date.start <- dates[i,1]
+    date.end <- dates[i,2]
+    cat(paste('Pulling range: ', date.start, '-', date.end, '\n', sep=''))
+
+    content <- jsonlite::fromJSON(pull_data('weight', date.start, date.end))
+
+    weight.Df <- rbind(weight.Df, content$weight)
+
+  }
 
   # Weight data also includes some extra stuff we don't need.
   myCols <- c('date', 'bmi', 'weight')
-  colNums <- match(myCols,names(nutrition.df))
-  nutrition.df <- dplyr::select(nutrition.df, colNums)
+  colNums <- match(myCols,names(weight.Df))
+  weight.Df <- dplyr::select(weight.Df, colNums)
 
-  names(nutrition.df)[names(nutrition.df) == 'date'] <- 'time'
-  nutrition.df$time <- as.character(nutrition.df$time, is.factor=FALSE)
+  names(weight.Df)[names(weight.Df) == 'date'] <- 'time'
+  weight.Df$time <- as.character(weight.Df$time, is.factor=FALSE)
 
-  nutrition.df[2:NCOL(nutrition.df)] <-as.numeric(unlist(nutrition.df[2:NCOL(nutrition.df)]))
+  weight.Df[2:NCOL(weight.Df)] <-as.numeric(unlist(weight.Df[2:NCOL(weight.Df)]))
 
-  return(nutrition.df)
+  return(weight.Df)
 }
 
 #' Fetch Fitbit nutrition data
